@@ -1,13 +1,14 @@
 pipeline:
+  description: Canary deployment of the nginx service to Kubernetes at 50 percent of replicas, followed by canary cleanup and a rolling rollout
   stages:
     - steps:
-        - name: deploy
-          id: deploy
-          deploy:
+        - name: Kubernetes Canary Deploy
+          id: k8sCanaryDeployStep
+          template:
             uses: k8sCanaryDeployStep
             with:
               unit: percentage
-              instances: <+input>
+              instances: "50"
               skip_dry_run: false
               traffic_shift: false
               manifests: ${{runtime.manifestPath}}
@@ -23,7 +24,37 @@ pipeline:
               server_side_apply: false
               pruning: false
               skip_resource_versioning: false
-          delegate: k8s-tools
+        - name: Kubernetes Canary Delete
+          id: k8sCanaryDeleteStep
+          template:
+            uses: k8sCanaryDeleteStep
+            with:
+              resources: ${{stage.steps.k8sCanaryDeployStep.output.outputVariables.canaryWorkloads}}
+              is_openshift: ${{stage.steps.k8sCanaryDeployStep.output.outputVariables.isOpenshift}}
+        - name: Kubernetes Rolling Deploy
+          id: k8sRollingDeployStep
+          template:
+            uses: k8sRollingDeployStep
+      rollback:
+        - group:
+            steps:
+              - name: Kubernetes Canary Rollback Delete
+                id: k8sCanaryRollbackDeleteStep
+                template:
+                  uses: k8sCanaryDeleteStep
+                  with:
+                    select_delete_resources: resources
+                    resources: ${{rollback.data.PLUGIN_CANARY_WORKLOADS}}
+                    is_openshift: ${{rollback.data.HARNESS_IS_OPENSHIFT}}
+              - name: Kubernetes Rolling Rollback
+                id: k8sRollingRollbackStep
+                template:
+                  uses: k8sRollingRollbackStep
+          id: k8sCanaryRollback
+          name: Kubernetes Canary Rollback
+      on-failure:
+        errors: all
+        action: stage-rollback
       name: deployment
       id: deployment
       service:
