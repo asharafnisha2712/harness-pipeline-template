@@ -1,6 +1,6 @@
 pipeline:
   description: Canary deployment of the nginx service to Kubernetes at 50 percent
-    of replicas, followed by canary cleanup and a rolling rollout in the test cluster
+    of replicas, followed by canary cleanup and a rolling rollout in the test cluster -changes from UI
   stages:
     - steps:
         - name: Kubernetes Canary Deploy
