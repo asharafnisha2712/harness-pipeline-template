@@ -12,7 +12,7 @@ pipeline:
               traffic_shift: false
               manifests: ${{runtime.manifestPath}}
               kubeconfig: ${{infra.kube_config_path}}
-              namespace: ${{infra.namespace}}
+              namespace: harness-demo
               release: ${{infra.releaseName}}
               apply_timeout: 5m
               log_level: info
