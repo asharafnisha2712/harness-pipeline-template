@@ -1,0 +1,46 @@
+pipeline:
+  stages:
+    - steps:
+        - name: deploy
+          id: deploy
+          deploy:
+            uses: k8sCanaryDeployStep
+            with:
+              unit: percentage
+              instances: <+input>
+              skip_dry_run: false
+              traffic_shift: false
+              manifests: ${{runtime.manifestPath}}
+              kubeconfig: ${{infra.kube_config_path}}
+              namespace: ${{infra.namespace}}
+              release: ${{infra.releaseName}}
+              apply_timeout: 5m
+              log_level: info
+              skip_steady_state_check: false
+              steady_state_timeout: 5m
+              describe_resources: false
+              print_manifests: false
+              server_side_apply: false
+              pruning: false
+              skip_resource_versioning: false
+          delegate: k8s-tools
+      name: deployment
+      id: deployment
+      service:
+        type: kubernetes
+        items:
+          - nginx_canary_service
+      environment:
+        items:
+          - id: environment_test
+            all-infra: true
+            deploy-to: <+input>
+      runtime:
+        kubernetes:
+          namespace: harness-demo
+          connector: connector_K8sCluster_c1c5
+      clone:
+        ref:
+          type: branch
+          name: develop
+        enabled: true
